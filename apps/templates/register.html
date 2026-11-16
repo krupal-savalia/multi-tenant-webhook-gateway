@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Create account · Webhook Gateway{% endblock %}
+{% block content %}<section class="panel">
+    <h1>Create your account</h1>
+    <p class="muted">Start managing webhook integrations in a few seconds.</p>
+    {% if msg %}
+        <div style="color: rgb(208, 28, 28);">{{msg}}</div>
+    {% endif %}
+    <form method="post" action="{% url 'register' %}">{% csrf_token %}
+        {{ regform.as_p }}<button type="submit">Create
+            account</button></form>
+    <p class="form-help">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+</section>{% endblock %}

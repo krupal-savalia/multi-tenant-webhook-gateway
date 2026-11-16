@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Webhook Gateway{% endblock %}</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: #e8eef7;
+            background: #0b1220
+        }
+
+        a {
+            color: #63e6be
+        }
+
+        .wrap {
+            width: min(1100px, calc(100% - 40px));
+            margin: auto
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 0
+        }
+
+        .brand {
+            color: #fff;
+            font-weight: 800;
+            letter-spacing: -.03em;
+            font-size: 1.1rem;
+            text-decoration: none
+        }
+
+        .brand span {
+            color: #63e6be
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 22px;
+            align-items: center
+        }
+
+        .nav-links a {
+            color: #a8b5c7;
+            text-decoration: none;
+            font-size: .9rem
+        }
+
+        .nav-links a:hover {
+            color: #63e6be
+        }
+
+        main {
+            min-height: calc(100vh - 150px)
+        }
+
+        .panel {
+            width: min(480px, 100%);
+            margin: 70px auto;
+            padding: 34px;
+            border: 1px solid #223149;
+            border-radius: 16px;
+            background: #111c2d
+        }
+
+        .panel h1 {
+            margin: 0 0 10px;
+            font-size: 2rem;
+            letter-spacing: -.04em
+        }
+
+        .muted {
+            color: #91a0b5;
+            line-height: 1.6
+        }
+
+        label {
+            display: block;
+            margin: 18px 0 7px;
+            color: #c4cfde;
+            font-size: .9rem;
+            font-weight: 600
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 13px;
+            border: 1px solid #304158;
+            border-radius: 8px;
+            color: #e8eef7;
+            background: #0b1220;
+            font: inherit
+        }
+
+        input:focus {
+            outline: 2px solid #63e6be;
+            border-color: transparent
+        }
+
+        button,
+        .button {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 13px 19px;
+            border: 0;
+            border-radius: 9px;
+            color: #07131a;
+            background: #63e6be;
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer
+        }
+
+        .button:hover,
+        button:hover {
+            filter: brightness(1.08)
+        }
+
+        .errorlist {
+            padding: 0;
+            color: #ff9b9b;
+            list-style: none;
+            font-size: .85rem
+        }
+
+        .form-help {
+            margin-top: 22px;
+            color: #91a0b5;
+            font-size: .9rem
+        }
+
+        footer {
+            padding: 24px 0;
+            border-top: 1px solid #1d2a3e;
+            color: #718198;
+            font-size: .85rem
+        }
+
+        @media(max-width:600px) {
+            .nav-links {
+                gap: 12px
+            }
+
+            .panel {
+                margin: 35px auto;
+                padding: 24px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <nav><a class="brand" href="{% url 'home' %}">Webhook<span>Gateway</span></a>
+            <div class="nav-links">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'logout' %}">Logout</a>
+                {% else %}
+                    <a href="{% url 'login' %}">Log in</a><a href="{% url 'register' %}">Get started</a>
+                {% endif %}
+            </div>
+        </nav>
+        <main>{% block content %}{% endblock %}</main>
+        <footer>Webhook Gateway · Simple, observable event delivery</footer>
+    </div>
+    
+</body>
+
+</html>

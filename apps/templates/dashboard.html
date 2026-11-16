@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Webhook Gateway{% endblock %}
+{% block content %}
+<style>
+    .dash {
+        padding: 55px 0
+    }
+
+    .dash-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: end;
+        margin-bottom: 28px
+    }
+
+    .eyebrow {
+        color: #63e6be;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .14em;
+        font-size: .75rem
+    }
+
+    .dash h1 {
+        margin: 10px 0 0;
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        letter-spacing: -.05em
+    }
+
+    .muted {
+        color: #91a0b5;
+        line-height: 1.6
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px
+    }
+
+    .card {
+        padding: 26px;
+        border: 1px solid #223149;
+        border-radius: 14px;
+        background: #111c2d
+    }
+
+    .card h2 {
+        margin: 0 0 8px;
+        font-size: 1.1rem
+    }
+
+    .prefix {
+        display: inline-block;
+        margin: 14px 0;
+        padding: 12px 14px;
+        border-radius: 8px;
+        color: #63e6be;
+        background: #0b1220;
+        font-family: ui-monospace, monospace
+    }
+
+    .danger-note {
+        color: #ffcb8a;
+        font-size: .88rem;
+        line-height: 1.5
+    }
+
+    .button {
+        margin-top: 12px
+    }
+
+    @media(max-width:700px) {
+        .dash-head {
+            display: block
+        }
+
+        .grid {
+            grid-template-columns: 1fr
+        }
+    }
+
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        place-items: center;
+        padding: 20px;
+        background: #050a12cc
+    }
+
+    .modal-backdrop.open {
+        display: grid
+    }
+
+    .modal {
+        width: min(520px, 100%);
+        padding: 30px;
+        border: 1px solid #63e6be55;
+        border-radius: 16px;
+        background: #111c2d;
+        box-shadow: 0 20px 70px #0008
+    }
+
+    .modal h2 {
+        margin-top: 0
+    }
+
+    .key {
+        display: block;
+        overflow: auto;
+        margin: 20px 0;
+        padding: 16px;
+        border-radius: 8px;
+        color: #07131a;
+        background: #63e6be;
+        font: 600 .9rem ui-monospace, monospace;
+        white-space: nowrap
+    }
+
+    .close {
+        color: #e8eef7;
+        background: #304158
+    }
+</style>
+<section class="dash">
+    <div class="dash-head">
+        <div>
+            <div class="eyebrow">Workspace</div>
+            <h1>Your dashboard</h1>
+            <p class="muted">Manage your webhook gateway credentials securely.</p>
+        </div>
+    </div>
+    <div class="grid">
+        <article class="card">
+            <h2>API key</h2>
+            <p class="muted">Your secret key is never shown again after generation.</p>
+            <div class="prefix">{% if tenant.api_key_prefix %} {{tenant.api_key_prefix}} {% else %} None {% endif %}</div>
+            <p class="danger-note">Only the prefix is stored for display. Generate a new key if your current key is
+                lost.</p><button class="button" id="generate-key" type="button">Generate API key</button>
+        </article>
+        <article class="card">
+            <h2>Workspace status</h2>
+            <p class="muted">Tenant: <strong>{% if tenant.name %} {{tenant.name}} {% else %} {{request.user}} {% endif %}</strong></p>
+            <p class="muted">Plan: <strong>{% if tenant.get_tire_display %} {{tenant.get_tire_display}} {% else %} None {% endif %}</strong></p><a class="button"
+                href="{% url 'home' %}">Back to home</a>
+        </article>
+    </div>
+</section>
+<div class="modal-backdrop" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
+    <div class="modal">
+        <h2 id="key-title">Save your API key now</h2>
+        <p class="muted">This key will not be shown again after you close this window. Store it in a password manager or
+            your server's environment variables.</p><code class="key" id="key-value"></code><button class="button"
+            id="copy-key" type="button">Copy key</button><button class="button close" id="close-modal" type="button">I
+            saved it</button>
+    </div>
+</div>
+<script>
+    const button = document.getElementById('generate-key'), modal = document.getElementById('key-modal'), value = document.getElementById('key-value');
+    button.addEventListener('click', async () => { 
+        button.disabled = true; 
+        button.textContent = 'Generating…'; 
+        try { 
+            const response = await fetch('{% url "generate_api_key" %}', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Accept': 'application/json' } });
+            const data = await response.json(); 
+            if (!response.ok) throw new Error(data.error || 'Unable to generate key'); 
+            value.textContent = data.api_key; modal.classList.add('open'); } 
+        catch (error) { alert(error.message) } 
+        finally { button.disabled = false; button.textContent = 'Generate API key' } });
+    document.getElementById('copy-key').addEventListener('click', () => 
+        navigator.clipboard.writeText(value.textContent)); 
+    document.getElementById('close-modal').addEventListener('click', () => { 
+        value.textContent = ''; 
+        modal.classList.remove('open'); 
+        window.location.reload(); });
+</script>
+{% endblock %}
