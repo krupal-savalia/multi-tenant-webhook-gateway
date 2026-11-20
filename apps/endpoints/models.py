@@ -15,6 +15,12 @@ class WebhookEndpoint(BaseModel):
 
     class Meta(BaseModel.Meta):
         indexes = [models.Index(fields=["tenant","is_active"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "target_url"],
+                name="unique_tenant_target_url",
+            )
+        ]
 
     def __str__(self):
         return f"{self.tenant.name} -> {self.target_url} -> {self.is_active}"

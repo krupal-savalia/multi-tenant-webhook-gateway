@@ -144,11 +144,30 @@
         <article class="card">
             <h2>Workspace status</h2>
             <p class="muted">Tenant: <strong>{% if tenant.name %} {{tenant.name}} {% else %} {{request.user}} {% endif %}</strong></p>
-            <p class="muted">Plan: <strong>{% if tenant.get_tire_display %} {{tenant.get_tire_display}} {% else %} None {% endif %}</strong></p><a class="button"
-                href="{% url 'home' %}">Back to home</a>
+            <p class="muted">Plan: <strong>{% if tenant.get_tire_display %} {{tenant.get_tire_display}} {% else %} None {% endif %}</strong></p><a class="button" style="margin-right: 10px;"
+                id="getEndpoints">Get All Endpoints</a><a class="button" id="addEndpoint">Add Endpoint</a>
         </article>
     </div>
 </section>
+<section class="dash" id="endpoints-table" style="display: none;">
+    <div class="grid">
+        <article class="card">
+            <h2>All Endpoints</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Endpoint Id</th>
+                        <th>Endpoint</th>
+                        <th>Is Active</th>
+                        <th>Subscribed Events</th>
+                    </tr>                    
+                </thead>
+                <tbody id="endpoints-body"></tbody>
+            </table>
+        </article>
+    </div>
+</section>
+
 <div class="modal-backdrop" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
     <div class="modal">
         <h2 id="key-title">Save your API key now</h2>
@@ -158,20 +177,177 @@
             saved it</button>
     </div>
 </div>
+<div class="modal-backdrop" id="endpoint-modal" role="dialog" aria-modal="true" aria-labelledby="endpoint-title">
+    <div class="modal">
+        <h2 id="endpoint-title">Add Endpoint</h2>
+        <div>
+        <label for="url">Endpoint URL</label>
+        <input type="url" id="url" placeholder="https://example.com/webhook" />
+        </div>
+
+        <div>
+        <label for="events">Events</label>
+        <input type="text" id="events" placeholder="order.created, user.updated or *" />
+        <small style="display: block; color: #555;">
+            Enter comma-separated events in <code>resource.action</code> format (e.g., <code>payment.succeeded, order.created</code>), 
+            or enter <code>*</code> alone to subscribe to all events. Duplicates are not allowed.
+        </small>
+        </div>
+        <button class="button"id="create-endpoint" type="button">Create Endpoint</button>
+        <button class="button close" id="close-Endpointmodal" type="button">Cancle</button>
+        <p id="status-message" style="color: red;"></p>
+    </div>
+</div>
 <script>
     const button = document.getElementById('generate-key'), modal = document.getElementById('key-modal'), value = document.getElementById('key-value');
+    const addEndpoint = document.getElementById('addEndpoint'), endpointModal = document.getElementById('endpoint-modal');
+    const createEndpoint = document.getElementById("create-endpoint");
+    const tbody = document.getElementById("endpoints-body"), table = document.getElementById("endpoints-table"), getEndpoints = document.getElementById("getEndpoints");
+
+    getEndpoints.addEventListener('click', async () => {
+        getEndpoints.disabled = true;
+        table.style.display = 'table';
+        tbody.innerHTML = '<tr><td colspan="4">loading....</td></tr>';
+
+        try {
+            const response = await fetch("{% url 'endpoints' %}", {method:'GET', headers:{'Accept': 'application/json'}});
+
+            if (!response.ok) throw new error('Failed to load Endpoints.');
+            const data = await response.json();
+
+            if (!data.endpoints || data.length ===0) {
+                tbody.innerHTML = '<tr><td colspan="4">No Endpoints Found.</td></tr>';
+            }
+            tbody.innerHTML = '';
+            data.endpoints.forEach(element => {
+                tbody.appendChild(renderEndpointRow(element));
+            });
+        } catch {
+            tbody.innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`;
+        }
+    })
+
+    function renderEndpointRow(ep) {
+        const tr = document.createElement('tr');
+
+        const idCell = document.createElement('td');
+        idCell.textContent = ep.id;
+
+        const urlcell = document.createElement('td');
+        urlcell.textContent = ep.target_url;
+
+        const isactive = document.createElement('td');
+        isactive.textContent = ep.is_active;
+
+        const eventcell = document.createElement('td');
+        eventcell.textContent = ep.subscribed_events;
+
+        tr.append(idCell, urlcell, isactive, eventcell);
+        return tr;
+    }
+
+    addEndpoint.addEventListener('click', () => {
+        addEndpoint.disabled = true;
+        endpointModal.classList.add('open');
+    });
+
+    document.getElementById("close-Endpointmodal").addEventListener('click', () => {
+        endpointModal.classList.remove('open');
+        addEndpoint.disabled = false;
+    });
+
+    createEndpoint.addEventListener('click', async () => {
+        const url = document.getElementById('url').value.trim();
+        const events = document.getElementById('events').value.trim();
+        const statusMsg = document.getElementById('status-message');
+        statusMsg.style.color = "red";
+
+        if (!url){
+            statusMsg.textContent = 'Please Enter Endpoint URL.';
+            return;
+        }
+        try {
+            new URL(url);
+        } catch {
+            statusMsg.textContent = "Please enter a valid URL (including http:// or https://).";
+            return;
+        }
+
+        if (!events) {
+            statusMsg.textContent = "Please enter at least one event or '*'.";
+            return;
+        }
+        const cleanedEvents = events.split(',').map(item => item.trim()).filter(item => item.length > 0);
+
+        if (cleanedEvents.length === 0){
+            statusMsg.textContent = "Please enter at least one valid event.";
+            return;
+        }
+        if (new Set(cleanedEvents).size !== cleanedEvents.length){
+            statusMsg.textContent = "Duplicate events are not allowed.";
+            return;
+        }
+        if (cleanedEvents.includes("*") && cleanedEvents.length > 1){
+            statusMsg.textContent = 'Use "*" alone when subscribing to all events.';
+            return;
+        }
+        for (const event of cleanedEvents){
+            if (event === "*") continue;
+            if (!event.includes(".")){
+                statusMsg.textContent = `Invalid event name: "${event}". Format must be resource.action (e.g., order.created).`;
+                return;
+            }
+        }
+
+        try {
+            createEndpoint.disabled = true;
+            const response = await fetch('{% url "endpoints" %}', {
+                method: "POST", 
+                headers: {"Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}", "Accept": "application/json"}, 
+                body: JSON.stringify({target_url:url, subscribed_events:cleanedEvents})
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Field to create endpoint.');
+
+            document.getElementById("url").value = '';
+            document.getElementById("events").value = '';
+            createEndpoint.disabled = false;
+            statusMsg.style.color = "green";
+            statusMsg.textContent = `Endpoint created successfully.\n ${data.message}\n\n Secret: ${data.secret}`;
+        } catch (err){
+            statusMsg.textContent = err.message;
+        } finally {
+            createEndpoint.disabled = false;
+        }
+        
+    });
+
     button.addEventListener('click', async () => { 
         button.disabled = true; 
         button.textContent = 'Generating…'; 
+
         try { 
-            const response = await fetch('{% url "generate_api_key" %}', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Accept': 'application/json' } });
+            const response = await fetch('{% url "generate_api_key" %}', { 
+                method: 'POST', 
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Accept': 'application/json' } 
+            });
+
             const data = await response.json(); 
             if (!response.ok) throw new Error(data.error || 'Unable to generate key'); 
-            value.textContent = data.api_key; modal.classList.add('open'); } 
-        catch (error) { alert(error.message) } 
-        finally { button.disabled = false; button.textContent = 'Generate API key' } });
+
+            value.textContent = data.api_key; modal.classList.add('open'); 
+
+        } catch (error) {
+            alert(error.message) 
+        } finally { 
+            button.disabled = false; 
+            button.textContent = 'Generate API key' 
+        } 
+    });
+
     document.getElementById('copy-key').addEventListener('click', () => 
         navigator.clipboard.writeText(value.textContent)); 
+
     document.getElementById('close-modal').addEventListener('click', () => { 
         value.textContent = ''; 
         modal.classList.remove('open'); 

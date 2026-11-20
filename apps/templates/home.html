@@ -1,3 +1,116 @@
 {% extends "base.html" %}
 {% block title %}Webhook Gateway{% endblock %}
-{% block unauth-content %}<style>.hero{padding:90px 0 80px;max-width:720px}.eyebrow{color:#63e6be;font-weight:700;text-transform:uppercase;letter-spacing:.14em;font-size:.75rem}.hero h1{margin:18px 0;font-size:clamp(2.7rem,7vw,5.2rem);line-height:.98;letter-spacing:-.06em}.hero h1 span{color:#63e6be}.lead{color:#a8b5c7;font-size:1.15rem;line-height:1.7;max-width:600px}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:32px}.secondary{color:#e8eef7;border:1px solid #304158}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding-bottom:70px}.card{padding:24px;border:1px solid #223149;border-radius:14px;background:#111c2d}.icon{color:#63e6be;font-size:1.5rem}.card h2{margin:12px 0 8px;font-size:1.05rem}.card p{margin:0;color:#91a0b5;line-height:1.6;font-size:.92rem}@media(max-width:700px){.hero{padding:55px 0}.cards{grid-template-columns:1fr}}</style><section class="hero"><div class="eyebrow">Reliable event delivery</div><h1>Webhooks that keep your systems <span>in sync.</span></h1><p class="lead">Receive events, route them to your endpoints, and track every delivery from one dependable gateway.</p><div class="actions"><a class="button" href="{% url 'register' %}">Get started</a><a class="button secondary" href="{% url 'login' %}">Log in</a></div></section><section class="cards"><article class="card"><div class="icon">↗</div><h2>Fast delivery</h2><p>Move events to the right destination with a clear, focused delivery pipeline.</p></article><article class="card"><div class="icon">◉</div><h2>Built for visibility</h2><p>Keep delivery attempts, responses, and failures easy to inspect and understand.</p></article><article class="card"><div class="icon">✓</div><h2>Ready to grow</h2><p>Organize traffic by tenant and endpoint as your integration footprint expands.</p></article></section>{% endblock %}
+{% block content %}<style>
+    .hero {
+        padding: 90px 0 80px;
+        max-width: 720px
+    }
+
+    .eyebrow {
+        color: #63e6be;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .14em;
+        font-size: .75rem
+    }
+
+    .hero h1 {
+        margin: 18px 0;
+        font-size: clamp(2.7rem, 7vw, 5.2rem);
+        line-height: .98;
+        letter-spacing: -.06em
+    }
+
+    .hero h1 span {
+        color: #63e6be
+    }
+
+    .lead {
+        color: #a8b5c7;
+        font-size: 1.15rem;
+        line-height: 1.7;
+        max-width: 600px
+    }
+
+    .actions {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 32px
+    }
+
+    .secondary {
+        color: #e8eef7;
+        border: 1px solid #304158
+    }
+
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding-bottom: 70px
+    }
+
+    .card {
+        padding: 24px;
+        border: 1px solid #223149;
+        border-radius: 14px;
+        background: #111c2d
+    }
+
+    .icon {
+        color: #63e6be;
+        font-size: 1.5rem
+    }
+
+    .card h2 {
+        margin: 12px 0 8px;
+        font-size: 1.05rem
+    }
+
+    .card p {
+        margin: 0;
+        color: #91a0b5;
+        line-height: 1.6;
+        font-size: .92rem
+    }
+
+    @media(max-width:700px) {
+        .hero {
+            padding: 55px 0
+        }
+
+        .cards {
+            grid-template-columns: 1fr
+        }
+    }
+</style>
+<section class="hero">
+    <div class="eyebrow">Reliable event delivery</div>
+    <h1>Webhooks that keep your systems <span>in sync.</span></h1>
+    <p class="lead">Receive events, route them to your endpoints, and track every delivery from one dependable gateway.
+    </p>
+    {% if user.is_authenticated %}
+        <div class="actions"><a class="button" href="{% url 'dashboard' %}">Go To Dashboard</a></div>
+    {% else %}
+        <div class="actions"><a class="button" href="{% url 'register' %}">Get started</a><a class="button secondary"
+                href="{% url 'login' %}">Log in</a></div>
+    {% endif %}
+</section>
+<section class="cards">
+    <article class="card">
+        <div class="icon">↗</div>
+        <h2>Fast delivery</h2>
+        <p>Move events to the right destination with a clear, focused delivery pipeline.</p>
+    </article>
+    <article class="card">
+        <div class="icon">◉</div>
+        <h2>Built for visibility</h2>
+        <p>Keep delivery attempts, responses, and failures easy to inspect and understand.</p>
+    </article>
+    <article class="card">
+        <div class="icon">✓</div>
+        <h2>Ready to grow</h2>
+        <p>Organize traffic by tenant and endpoint as your integration footprint expands.</p>
+    </article>
+</section>{% endblock %}
