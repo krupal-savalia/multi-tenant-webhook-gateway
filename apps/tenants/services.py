@@ -1,6 +1,8 @@
 import hashlib
 import secrets
+import hmac
 from typing import Tuple
+from apps.tenants.models import Tenant
 
 
 def api_key_generator() -> Tuple[str, str, str]:
@@ -11,3 +13,15 @@ def api_key_generator() -> Tuple[str, str, str]:
     api_key_prefix = raw_key[:12]
 
     return api_key_hash, api_key_prefix, raw_key
+
+def authenticate_api_key(api_key):
+    if not api_key:
+        return None
+    
+    key_hash = hashlib.sha256(api_key.encode("utf-8")).haxdigest()
+
+    for tenant in Tenant.objects.filter(is_active=True):
+        if hmac.compare_digest(tenant.api_key_hash, key_hash):
+            return tenant
+
+    return None

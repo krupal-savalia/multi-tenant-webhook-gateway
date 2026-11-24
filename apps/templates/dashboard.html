@@ -46,6 +46,11 @@
         background: #111c2d
     }
 
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+    th, td { padding: 12px; border-bottom: 1px solid #223149; text-align: left; }
+    th { color: #91a0b5; font-size: .8rem; text-transform: uppercase; }
+    .action-button { margin: 0; padding: 7px 11px; background: #6d2935; color: #ffd7d7; }
+
     .card h2 {
         margin: 0 0 8px;
         font-size: 1.1rem
@@ -160,6 +165,7 @@
                         <th>Endpoint</th>
                         <th>Is Active</th>
                         <th>Subscribed Events</th>
+                        <th>Action</th>
                     </tr>                    
                 </thead>
                 <tbody id="endpoints-body"></tbody>
@@ -206,24 +212,27 @@
 
     getEndpoints.addEventListener('click', async () => {
         getEndpoints.disabled = true;
-        table.style.display = 'table';
-        tbody.innerHTML = '<tr><td colspan="4">loading....</td></tr>';
+        table.style.display = 'block';
+        tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
 
         try {
             const response = await fetch("{% url 'endpoints' %}", {method:'GET', headers:{'Accept': 'application/json'}});
 
-            if (!response.ok) throw new error('Failed to load Endpoints.');
+            if (!response.ok) throw new Error('Failed to load endpoints.');
             const data = await response.json();
 
-            if (!data.endpoints || data.length ===0) {
-                tbody.innerHTML = '<tr><td colspan="4">No Endpoints Found.</td></tr>';
+            if (!data.endpoints || data.endpoints.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No endpoints found.</td></tr>';
+                return;
             }
             tbody.innerHTML = '';
             data.endpoints.forEach(element => {
                 tbody.appendChild(renderEndpointRow(element));
             });
-        } catch {
-            tbody.innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`;
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5" style="color: red;">${err.message}</td></tr>`;
+        } finally {
+            getEndpoints.disabled = false;
         }
     })
 
@@ -240,10 +249,35 @@
         isactive.textContent = ep.is_active;
 
         const eventcell = document.createElement('td');
-        eventcell.textContent = ep.subscribed_events;
+        eventcell.textContent = ep.subscribed_events.join(', ');
 
-        tr.append(idCell, urlcell, isactive, eventcell);
+        const actionCell = document.createElement('td');
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'button action-button';
+        deleteButton.textContent = 'Delete';
+        deleteButton.type = 'button';
+        deleteButton.addEventListener('click', () => deleteEndpoint(ep.id));
+        actionCell.appendChild(deleteButton);
+
+        tr.append(idCell, urlcell, isactive, eventcell, actionCell);
         return tr;
+    }
+
+    async function deleteEndpoint(endpointId) {
+        if (!confirm('Deactivate this endpoint?')) return;
+
+        const response = await fetch(`/api/v1/endpoints/${endpointId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to delete endpoint.');
+
+        getEndpoints.click();
     }
 
     addEndpoint.addEventListener('click', () => {

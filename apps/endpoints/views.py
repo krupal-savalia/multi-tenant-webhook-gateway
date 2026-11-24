@@ -50,7 +50,7 @@ def manageEndpoints(request):
         
     elif request.method == "GET":
 
-        urls = WebhookEndpoint.objects.filter(tenant=tenant)
+        urls = WebhookEndpoint.objects.filter(tenant=tenant, is_active=True)
         data = [
             {"id": ep.id,
             "target_url": ep.target_url,
@@ -66,7 +66,7 @@ def delete_endpoint(request, endpoint_id):
     if not request.user.is_authenticated:
             return JsonResponse({"error":"Authentication required."}, status=401)
     try:
-        tenant = request.user.tenant
+        tenant = get_object_or_404(Tenant, owner=request.user) 
     except tenant.DoesNotExist:
         return JsonResponse({"error": "User does not have a tenant."}, status=400)
 

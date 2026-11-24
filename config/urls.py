@@ -23,6 +23,6 @@ urlpatterns = [
     path('', include('apps.common.urls')),
     # path('api/tenant/', include('apps.tenants.urls')),
     path('api/v1/endpoints/', include('apps.endpoints.urls')),
-    # path('api/event/', include('apps.tenants.urls')),
+    path('api/v1/events/', include('apps.events.urls')),
     # path('api/delivery/', include('apps.tenants.urls')),
 ]
