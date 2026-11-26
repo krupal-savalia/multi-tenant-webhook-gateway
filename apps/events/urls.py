@@ -1,7 +1,7 @@
-from rest_framework.urls import path
+from django.urls import path
 from apps.events import views
 
 
 urlpatterns = [
-    path("", views.recieve_incoming_Event, name="incomingEvent"),
+    path("", views.recieve_incoming_event, name="incomingEvent"),
 ]

@@ -28,6 +28,9 @@ def deliver_webhook(self, attempt_id):
     if attempt.status == DeliveryStatus.SUCCESS:
         return "Already delivered."
 
+    if attempt.status == DeliveryStatus.EXHAUSTED:
+        return f"Delivery already finished as {attempt.status}."
+
     endpoint = attempt.endpoint
     event = attempt.event
 
@@ -104,6 +107,28 @@ def deliver_webhook(self, attempt_id):
 
         attempt.status = DeliveryStatus.FAILED
         attempt.error_message = f"Destination returned HTTP {response.status_code}."
+        
+        endpoint.failure_count = F("failure_count") + 1
+        endpoint.save(update_fields=["failure_count"])
+        endpoint.refresh_from_db()
+
+        if endpoint.failure_count >= 10:
+            endpoint.circuit_broken_until = timezone.now() + timedelta(days=1)
+            endpoint.save(update_fields=["circuit_broken_until"]) 
+            logger.warning(f"Circuit breaker tripped for endpoint {endpoint.id}")
+            attempt.next_retry_at = timezone.now() + timedelta(self.request.retries)
+            attempt.save(update_fields=["status", "response_status_code", "response_body", "response_headers", "response_time_ms", "error_message", "next_retry_at", "updated_at"])
+            return "Circuit breker tripped."
+        
+        if response.status_code >= 500:              
+            return retry_or_exhusted(
+                task=self,
+                attempt=attempt,
+                error_message=(
+                    f"Temporary HTTP error: {response.status_code}"
+                ),
+            )
+        
         attempt.save(update_fields=[
             "status",
             "response_status_code",
@@ -115,33 +140,21 @@ def deliver_webhook(self, attempt_id):
             "updated_at",
         ])
 
-        endpoint.failure_count = F("failure_count") + 1
-        endpoint.save(update_fields=["failure_count"])
-        endpoint.refresh_from_db()
-
-        if endpoint.failure_count >= 50:
-            endpoint.circuit_broken_until = timezone.now() + timedelta(days=1)
-            endpoint.save(update_fields=["circuit_broken_until"]) 
-            logger.warning(f"Circuit breaker tripped for endpoint {endpoint.id}")
-            return "Circuit breker tripped."
-
-        if response.status_code >= 500:
-            raise self.retry(
-                exc=Exception(
-                    f"Temporary destination error: {response.status_code}"
-                ),
-                countdown=10 * (2 ** self.request.retries)
-            )
-        
         return "Webhook delivery failed permanently."
     
-    except httpx.ReadError as exc:
+    except httpx.RequestError as exc:
 
-        elapsed_ms = int(timezone.now() - started_at) * 1000
+        elapsed_ms = int(time.perf_counter() - started_at) * 1000
 
         attempt.status = DeliveryStatus.FAILED
         attempt.error_message = str(exc)
-        attempt.save()
+        attempt.response_time_ms = elapsed_ms
+        attempt.save(update_fields=[
+            "status",
+            "error_message",
+            "response_time_ms",
+            "updated_at",
+        ])
         
         endpoint.failure_count = F("failure_count") + 1
         endpoint.save(update_fields=["failure_count"])
@@ -153,9 +166,42 @@ def deliver_webhook(self, attempt_id):
             logger.warning(f"Circuit breaker tripped for endpoint {endpoint.id}")
             return "Circuit breker tripped due to timeout."
 
-        raise self.retry(
-            exc=exc,
-            countdown=10 * (2 ** self.request.retries)
+        return retry_or_exhusted(
+            task=self,
+            attempt=attempt,
+            error_message=str(exc),
         )
 
 
+def retry_or_exhusted(task, attempt, error_message):
+    attempt.error_message = error_message
+
+    if task.request.retries >= task.max_retries:
+        attempt.status = DeliveryStatus.EXHAUSTED
+        attempt.next_retry_at = None
+
+        attempt.save(update_fields=[
+            "status",
+            "error_message",
+            "next_retry_at",
+            "updated_at",
+        ])
+
+        return "Delivery exhausted."
+
+    delay = 10 * (2 ** task.request.retries)
+
+    attempt.status = DeliveryStatus.PENDING
+    attempt.next_retry_at = timezone.now() + timedelta(seconds=delay)
+
+    attempt.save(update_fields=[
+        "status",
+        "error_message",
+        "next_retry_at",
+        "updated_at",
+    ]) 
+
+    raise task.retry(
+        exc=Exception(error_message),
+        countdown=delay,
+    )

@@ -2,6 +2,7 @@ import json
 import secrets
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.core.cache import cache
 from django.views.decorators.http import require_http_methods
 from apps.endpoints.models import WebhookEndpoint
 from apps.tenants.models import Tenant
@@ -49,14 +50,17 @@ def manageEndpoints(request):
         )
         
     elif request.method == "GET":
-
-        urls = WebhookEndpoint.objects.filter(tenant=tenant, is_active=True)
-        data = [
-            {"id": ep.id,
-            "target_url": ep.target_url,
-            "is_active": ep.is_active,
-            "subscribed_events": ep.subscribed_events,}
-            for ep in urls]
+        cache_key = f"tenant_endpoints:{tenant.id}"
+        data = cache.get(cache_key)
+        if data is None:
+            urls = WebhookEndpoint.objects.filter(tenant=tenant, is_active=True)
+            data = [
+                {"id": ep.id,
+                "target_url": ep.target_url,
+                "is_active": ep.is_active,
+                "subscribed_events": ep.subscribed_events,}
+                for ep in urls]
+            cache.set(cache_key, data, timeout=60)
 
         return JsonResponse({"endpoints":data}, status=200)
 

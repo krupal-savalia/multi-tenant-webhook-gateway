@@ -7,7 +7,11 @@ def generate_signature_header(secret: str, payload: dict) -> str:
 
     timestamp = int(time.time())
 
-    raw_body = json.dump(payload, separators=(',', ':'))
+    raw_body = json.dumps(
+                    payload,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                )
 
     signed_payload = f"{timestamp}.{raw_body}".encode("utf-8")
     secret_byte = secret.encode("utf-8") 

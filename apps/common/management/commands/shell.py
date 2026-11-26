@@ -2,15 +2,13 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.deliveries.models import DeliveryAttempt, DeliveryStatus
 from apps.endpoints.models import WebhookEndpoint
-from apps.deliveries.tasks import test_redis_connection
+
 
 
 class Command(BaseCommand):
     help = "Show the query plan for delivery attempts for a webhook endpoint"
 
-    task = test_redis_connection.delay()
-    print(task.id)
-
+   
     # def add_arguments(self, parser):
     #     parser.add_argument("--endpoint-id")
     #     parser.add_argument(
